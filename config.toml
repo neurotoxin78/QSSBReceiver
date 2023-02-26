@@ -1,0 +1,5 @@
+[display]
+output_display = 0
+
+[intervals]
+stream_interval_ms = 250
