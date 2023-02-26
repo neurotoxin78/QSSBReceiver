@@ -65,7 +65,6 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(str, object)
     def updatePlot(self, sr, sample):
-        #print(sr)
         self.imag.setData(sample)
 
 
