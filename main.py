@@ -1,26 +1,13 @@
 import sys
+
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import Qt, QTimer, QSize, QRect, pyqtSignal, pyqtSlot, QObject, QThread
-from PyQt5.QtGui import QFont, QBrush, QColor
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QDesktopWidget)
-from source.sdrplay import SDRPlaySource
+from PyQt5.QtCore import pyqtSlot, QThread
+from PyQt5.QtWidgets import (QMainWindow, QDesktopWidget)
+
+from handlers.receiver import SDRHandler
 from tools import extended_exception_hook, get_config
-from SoapySDR import *
-from pyqtgraph import PlotWidget
-import pyqtgraph as pg
-
-
-
-class SDRHandler(QObject):
-    running = False
-    update_sample = pyqtSignal(str, object)
-    sdr = SDRPlaySource()
-
-    def run(self):
-        while True:
-            sr, samples = self.sdr.readStream()
-            audio = samples.flatten().view('float32')
-            self.update_sample.emit(str(sr.timeNs), audio)
+from widgets.graphs import GraphScreen
+from widgets.tuner import Tuner
 
 
 class MainWindow(QMainWindow):
@@ -32,26 +19,27 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("QSSB")
 
         # UPLOAD PLOT
-        self.plot = PlotWidget()
-        self.plot.setGeometry(QRect(0, 0, 10, 10))
-        self.plot.setStyleSheet("background-color: transparent; color: #FB9902;")
-        self.plot.setObjectName("upload_plot")
-        background = QBrush()
-        background.setColor(QColor(0x31363b))
-        self.plot.setBackground(background)
-        self.plot.plotItem.showGrid(x=True, y=True, alpha=0.8)
-        self.plot.getPlotItem().addLegend()
-        self.plot.getPlotItem().enableAutoRange(axis='x', enable=True)
-        # self.plot.getPlotItem().invertY()
-        # self.upload_plot.getPlotItem().invertX()
-        self.imag = self.plot.plot(
-            pen=pg.mkPen('#009637', width=1, name="imag", symbolBrush=(0, 0, 200), symbolPen='w', symbol='o',
-                         symbolSize=14,
-                         style=Qt.SolidLine))
-        self.plot.getPlotItem().hideAxis('bottom')
-        self.plot.getPlotItem().hideAxis('left')
-        self.centralLayout.addWidget(self.plot, 0, 0)
+        self.graphscreen = GraphScreen()
+        self.centralLayout.addWidget(self.graphscreen, 0, 0)
+        self.tuner = Tuner()
+        self.centralLayout.addWidget(self.tuner, 0, 1, 2, 2)
+        self.tuner.tuneDial.valueChanged.connect(self.Tune)
         self.thread = QThread()
+        self.configureThread()
+
+
+
+    @pyqtSlot(object, object)
+    def updatePlot(self, sr, sample):
+        # freq_domain = np.fft.fftshift(np.fft.fft(sample))
+        self.graphscreen.imag.setData(sample.real)
+        # pass
+
+    def Tune(self):
+        self.sdrHandler.sdr.frequency = self.tuner.tuneDial.value()
+        self.tuner.freqLabel.setText(str(self.tuner.tuneDial.value()))
+
+    def configureThread(self):
         # create object which will be moved to another thread
         self.sdrHandler = SDRHandler()
         # move object to another thread
@@ -62,13 +50,6 @@ class MainWindow(QMainWindow):
         self.thread.started.connect(self.sdrHandler.run)
         # start thread
         self.thread.start()
-
-    @pyqtSlot(str, object)
-    def updatePlot(self, sr, sample):
-        self.imag.setData(sample)
-
-
-
 
 
 
