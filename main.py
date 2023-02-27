@@ -1,9 +1,9 @@
 import sys
-
+import numpy as np
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtCore import pyqtSlot, QThread
 from PyQt5.QtWidgets import (QMainWindow, QDesktopWidget)
-
+from collections import deque
 from handlers.receiver import SDRHandler
 from tools import extended_exception_hook, get_config
 from widgets.graphs import GraphScreen
@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(object, object)
     def updatePlot(self, sr, sample):
-        # freq_domain = np.fft.fftshift(np.fft.fft(sample))
+
         self.graphscreen.imag.setData(sample.real)
         # pass
 

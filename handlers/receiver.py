@@ -9,7 +9,7 @@ class SDRHandler(QObject):
     running = False
     update_sample = pyqtSignal(object, object)
     sdr = SDRPlaySource()
-    blocksize = sdr.buff_size
+    blocksize = sdr.buff_size - 1024
     stream = sd.OutputStream(channels=1, blocksize=blocksize, dtype='float32', latency='high', dither_off=False)
     stream.start()
 
@@ -29,23 +29,17 @@ class SDRHandler(QObject):
         return signal.decimate(samples, int(sample_rate / 48000), zero_phase=True)
 
     def ssb_demodulate(self, samples, fc, fs):
-
         # Create a complex heterodyne mixer
         t = np.arange(len(samples)) / fs
         mixer = np.exp(-1j * 2 * np.pi * fc * t)
-
         # Mix the SSB signal with the mixer
         mixed = samples * (mixer)
-
         # Take the real part of the mixed signal to remove the carrier
         demodulated = np.real(mixed)
-
         # Apply a low-pass filter to remove high-frequency noise or distortion
         nyquist = fs / 2
         cutoff = 2.4e3 / nyquist
         b, a = signal.butter(6, cutoff, 'lowpass')
         filtered = signal.filtfilt(b, a, demodulated)
-
         decimated = self.decimate(filtered, fs)
-
         return decimated.astype(np.float32)

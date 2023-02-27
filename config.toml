@@ -3,3 +3,6 @@ output_display = 0
 
 [intervals]
 stream_interval_ms = 250
+
+[graph]
+graph_data_limit = 460
